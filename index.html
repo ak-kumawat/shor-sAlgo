@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shor's Algorithm Simulator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Shor's Algorithm Simulator</h1>
+        <p>This page simulates Shor's Algorithm for integer factorization with a quantum computer. Since this page runs
+            in javascript on your non-quantum browser, the quantum part of the algorithm is simulated using
+            probabilities.</p>
+    </header>
+
+    <main>
+
+        <!-- ── INPUT ── -->
+        <div class="input-row">
+            <label for="inp-n">Number to factor [n]:</label>
+            <input id="inp-n" type="number" value="15" min="4" />
+            <label for="inp-a">Base [a]:</label>
+            <input id="inp-a" type="number" value="7" min="2" />
+            <button onclick="runShor()">Factor</button>
+            <button onclick="resetOutput()" style="border-color:#888;color:#555">Reset</button>
+        </div>
+        <p class="hint">Try n = 15, 21, 33, 35, 77, 91, 143 &nbsp;·&nbsp; Leave base 'a' random or choose your own (must
+            be coprime to n)</p>
+
+        <div id="output"></div>
+
+        <hr>
+
+        <!-- ── HOW IT WORKS ── -->
+        <div class="section-title">How It Works</div>
+        <p class="section-body">Shor's Algorithm reduces integer factorization to period-finding — a task quantum
+            computers can solve exponentially faster using superposition and the Quantum Fourier Transform. It is a
+            hybrid classical–quantum procedure.</p>
+
+        <ul class="steps-list">
+            <li>
+                <div class="step-num">1</div>
+                <div class="step-body"><strong>Choose random a &nbsp;<span
+                            class="badge badge-classical">Classical</span></strong><span>Select a random integer a,
+                        where 1 &lt; a &lt; n, coprime to n.</span></div>
+            </li>
+            <li>
+                <div class="step-num">2</div>
+                <div class="step-body"><strong>GCD check &nbsp;<span
+                            class="badge badge-classical">Classical</span></strong><span>Compute gcd(a, n). If &gt; 1,
+                        you found a factor immediately — no quantum needed.</span></div>
+            </li>
+            <li>
+                <div class="step-num step-q">3</div>
+                <div class="step-body"><strong>Quantum period finding &nbsp;<span
+                            class="badge badge-quantum">Quantum</span></strong><span>Quantum circuit evaluates f(x) = aˣ
+                        mod n for ALL x simultaneously using superposition, then applies QFT to extract the period
+                        r.</span></div>
+            </li>
+            <li>
+                <div class="step-num">4</div>
+                <div class="step-body"><strong>Validate period &nbsp;<span
+                            class="badge badge-classical">Classical</span></strong><span>If r is odd or a^(r/2) ≡ −1
+                        (mod n), restart with new a. Success probability &gt; 50%.</span></div>
+            </li>
+            <li>
+                <div class="step-num">5</div>
+                <div class="step-body"><strong>Compute GCD &nbsp;<span
+                            class="badge badge-classical">Classical</span></strong><span>Calculate gcd(a^(r/2) + 1, n)
+                        and gcd(a^(r/2) − 1, n) using Euclidean algorithm.</span></div>
+            </li>
+            <li>
+                <div class="step-num">6</div>
+                <div class="step-body"><strong>Extract factors &nbsp;<span
+                            class="badge badge-classical">Classical</span></strong><span>Non-trivial results are the
+                        prime factors p and q. Verify p × q = n.</span></div>
+            </li>
+        </ul>
+
+        <hr>
+
+        <!-- ── MATH ── -->
+        <div class="section-title">Mathematical Formulation</div>
+        <div class="grid2">
+            <div class="box">
+                <h4>Modular exponentiation function</h4>
+                <div class="formula">f(x) = aˣ mod n</div>
+                <p>Core function whose period we seek. Evaluated for all x simultaneously in superposition.</p>
+            </div>
+            <div class="box">
+                <h4>Period definition</h4>
+                <div class="formula">aʳ ≡ 1 (mod n)</div>
+                <p>r is the smallest positive integer satisfying this — the cycle length of f(x).</p>
+            </div>
+            <div class="box">
+                <h4>Factor extraction via GCD</h4>
+                <div class="formula">gcd(a^(r/2) ± 1, n)</div>
+                <p>Once r is found (even, non-trivial), these GCD calculations yield the prime factors.</p>
+            </div>
+            <div class="box">
+                <h4>Conditions for success</h4>
+                <div class="formula" style="font-size:0.85rem">r even &amp; a^(r/2) ≢ −1 (mod n)</div>
+                <p>If conditions fail, pick a new random a and retry. Expected attempts: 2–3.</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ── QUANTUM CIRCUIT ── -->
+        <div class="section-title">Quantum Circuit</div>
+        <p class="section-body">Three stages run on the quantum computer; initialization and post-processing run
+            classically.</p>
+        <div class="circuit-wrap">
+            <svg viewBox="0 0 780 300" width="100%" style="display:block;min-width:600px">
+                <!-- qubit wires -->
+                <line x1="60" y1="75" x2="720" y2="75" stroke="#bbb" stroke-width="1" />
+                <line x1="60" y1="110" x2="720" y2="110" stroke="#bbb" stroke-width="1" />
+                <line x1="60" y1="145" x2="720" y2="145" stroke="#bbb" stroke-width="1" />
+                <line x1="60" y1="195" x2="720" y2="195" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3" />
+                <line x1="60" y1="230" x2="720" y2="230" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3" />
+                <line x1="60" y1="265" x2="720" y2="265" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3" />
+                <!-- labels -->
+                <text x="8" y="79" font-size="11" font-family="monospace" fill="#333">|0⟩ q₀</text>
+                <text x="8" y="114" font-size="11" font-family="monospace" fill="#333">|0⟩ q₁</text>
+                <text x="8" y="149" font-size="11" font-family="monospace" fill="#333">|0⟩ q₂</text>
+                <text x="8" y="199" font-size="11" font-family="monospace" fill="#888">|0⟩ q₃</text>
+                <text x="8" y="234" font-size="11" font-family="monospace" fill="#888">|0⟩ q₄</text>
+                <text x="8" y="269" font-size="11" font-family="monospace" fill="#888">|0⟩ q₅</text>
+                <!-- stage labels -->
+                <text x="158" y="38" font-size="10" font-family="Georgia,serif" fill="#888"
+                    text-anchor="middle">Superposition</text>
+                <text x="380" y="38" font-size="10" font-family="Georgia,serif" fill="#888" text-anchor="middle">Mod.
+                    Exponentiation</text>
+                <text x="578" y="38" font-size="10" font-family="Georgia,serif" fill="#888"
+                    text-anchor="middle">QFT</text>
+                <text x="680" y="38" font-size="10" font-family="Georgia,serif" fill="#888"
+                    text-anchor="middle">Measure</text>
+                <!-- dividers -->
+                <line x1="222" y1="45" x2="222" y2="282" stroke="#ddd" stroke-width="0.8" stroke-dasharray="3,3" />
+                <line x1="500" y1="45" x2="500" y2="282" stroke="#ddd" stroke-width="0.8" stroke-dasharray="3,3" />
+                <line x1="638" y1="45" x2="638" y2="282" stroke="#ddd" stroke-width="0.8" stroke-dasharray="3,3" />
+                <!-- H gates -->
+                <rect x="140" y="63" width="26" height="24" rx="2" fill="#fff" stroke="#111" stroke-width="1" />
+                <text x="153" y="79" font-size="12" font-family="monospace" fill="#111" text-anchor="middle"
+                    font-weight="bold">H</text>
+                <rect x="140" y="98" width="26" height="24" rx="2" fill="#fff" stroke="#111" stroke-width="1" />
+                <text x="153" y="114" font-size="12" font-family="monospace" fill="#111" text-anchor="middle"
+                    font-weight="bold">H</text>
+                <rect x="140" y="133" width="26" height="24" rx="2" fill="#fff" stroke="#111" stroke-width="1" />
+                <text x="153" y="149" font-size="12" font-family="monospace" fill="#111" text-anchor="middle"
+                    font-weight="bold">H</text>
+                <!-- |1⟩ init ancilla -->
+                <rect x="140" y="183" width="26" height="24" rx="2" fill="#f5f0e8" stroke="#999" stroke-width="1" />
+                <text x="153" y="199" font-size="10" font-family="monospace" fill="#555" text-anchor="middle">|1⟩</text>
+                <!-- Mod Exp block -->
+                <rect x="240" y="55" width="242" height="220" rx="3" fill="rgba(0,0,0,0.02)" stroke="#999"
+                    stroke-width="1" />
+                <text x="361" y="155" font-size="12" font-family="Georgia,serif" fill="#333" text-anchor="middle">Uₐ
+                    gates</text>
+                <text x="361" y="173" font-size="10" font-family="monospace" fill="#777" text-anchor="middle">f(x) = aˣ
+                    mod n</text>
+                <text x="361" y="190" font-size="9" font-family="Georgia,serif" fill="#999" text-anchor="middle">all x
+                    in parallel</text>
+                <!-- QFT block -->
+                <rect x="514" y="55" width="110" height="128" rx="3" fill="rgba(0,0,0,0.02)" stroke="#999"
+                    stroke-width="1" />
+                <text x="569" y="115" font-size="12" font-family="Georgia,serif" fill="#333"
+                    text-anchor="middle">QFT†</text>
+                <text x="569" y="132" font-size="9" font-family="Georgia,serif" fill="#999" text-anchor="middle">period
+                    extraction</text>
+                <!-- Measure gates -->
+                <rect x="648" y="63" width="28" height="24" rx="2" fill="#fff" stroke="#555" stroke-width="1" />
+                <text x="662" y="79" font-size="10" font-family="monospace" fill="#555" text-anchor="middle">M</text>
+                <rect x="648" y="98" width="28" height="24" rx="2" fill="#fff" stroke="#555" stroke-width="1" />
+                <text x="662" y="114" font-size="10" font-family="monospace" fill="#555" text-anchor="middle">M</text>
+                <rect x="648" y="133" width="28" height="24" rx="2" fill="#fff" stroke="#555" stroke-width="1" />
+                <text x="662" y="149" font-size="10" font-family="monospace" fill="#555" text-anchor="middle">M</text>
+                <!-- output arrow & label -->
+                <line x1="676" y1="100" x2="720" y2="100" stroke="#333" stroke-width="1" marker-end="url(#arr)" />
+                <text x="725" y="104" font-size="10" font-family="Georgia,serif" fill="#555">r</text>
+                <defs>
+                    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+                        orient="auto">
+                        <path d="M1 1L9 5L1 9" fill="none" stroke="#333" stroke-width="1.5" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <hr>
+
+        <!-- ── QFT VISUALIZATION ── -->
+        <div class="section-title">QFT — Interference Visualization</div>
+        <p class="section-body">The Quantum Fourier Transform extracts the hidden period r using interference.
+            Correct-period states interfere constructively (tall peaks); all others cancel out (destructive
+            interference).</p>
+        <div id="qft-wrap">
+            <div class="qft-controls">
+                <label>Period r: <input type="range" id="qp" min="2" max="8" value="4" oninput="drawQFT()"> <strong
+                        id="qp-v">4</strong></label>
+                <label>States N: <input type="range" id="qn" min="8" max="64" value="32" step="4" oninput="drawQFT()">
+                    <strong id="qn-v">32</strong></label>
+            </div>
+            <canvas id="qft-canvas" height="180" style="width:100%;display:block"></canvas>
+            <p style="font-size:0.78rem;color:#777;margin-top:6px;font-style:italic">Peaks appear at multiples of N/r —
+                revealing the period. Green = period multiple; grey = cancelled by destructive interference.</p>
+        </div>
+
+        <hr>
+
+        <!-- ── SUPERPOSITION ── -->
+        <div class="section-title">Quantum Superposition</div>
+        <p class="section-body">Classical bits are always 0 or 1. Qubits can be both simultaneously — allowing a quantum
+            computer to evaluate f(x) for all 2ⁿ values of x at once.</p>
+        <div class="grid2">
+            <div class="box">
+                <h4>Classical vs Quantum</h4>
+                <div class="toggle-btns">
+                    <button id="btn-classical" onclick="showBits('classical')">Classical bits</button>
+                    <button id="btn-quantum" onclick="showBits('quantum')" class="active">Qubits</button>
+                </div>
+                <div class="qubit-row" id="qubit-row"></div>
+                <p id="qubit-caption" style="font-size:0.8rem;color:#555;margin-top:4px"></p>
+            </div>
+            <div class="box">
+                <h4>The Maze Analogy</h4>
+                <p style="margin-bottom:0.6rem"><strong>Classical:</strong> Walk one path, hit a wall, backtrack, try
+                    another. Tries each x one by one — O(√N) attempts.</p>
+                <p><strong>Quantum:</strong> All paths explored simultaneously. One "ghost" per path — the correct one
+                    is amplified by QFT, wrong ones cancel out. Period found in polynomial time.</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ── COMPLEXITY ── -->
+        <div class="section-title">Complexity Comparison</div>
+        <p class="section-body">The exponential gap between classical and quantum complexity grows astronomically with
+            key size.</p>
+        <table class="cmp-table">
+            <thead>
+                <tr>
+                    <th>Algorithm</th>
+                    <th>Complexity</th>
+                    <th>2048-bit RSA</th>
+                    <th>Practical?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Classical (GNFS)</td>
+                    <td><code style="font-family:monospace;font-size:0.82rem">exp((log n)^(1/3)(log log n)^(2/3))</code>
+                    </td>
+                    <td>Billions of years</td>
+                    <td>Yes (for small n)</td>
+                </tr>
+                <tr>
+                    <td><strong>Shor's Algorithm</strong></td>
+                    <td><code style="font-family:monospace;font-size:0.9rem">O((log n)³)</code></td>
+                    <td>Hours (theoretically)</td>
+                    <td>No — hardware not ready</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <!-- ── RSA / THREAT ── -->
+        <div class="section-title">What is at Risk?</div>
+        <p class="section-body">Shor's Algorithm breaks any cryptosystem whose security relies on the hardness of
+            integer factorization or discrete logarithms.</p>
+        <table class="threat-table">
+            <thead>
+                <tr>
+                    <th>System</th>
+                    <th>Used for</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>RSA</td>
+                    <td>HTTPS, email, banking</td>
+                    <td class="tag-risk">Broken by Shor's</td>
+                </tr>
+                <tr>
+                    <td>ECC / ECDSA</td>
+                    <td>TLS, code signing, Bitcoin</td>
+                    <td class="tag-risk">Broken by Shor's</td>
+                </tr>
+                <tr>
+                    <td>Diffie-Hellman</td>
+                    <td>Key exchange (TLS)</td>
+                    <td class="tag-risk">Broken by Shor's</td>
+                </tr>
+                <tr>
+                    <td>AES-128</td>
+                    <td>Symmetric encryption</td>
+                    <td class="tag-partial">Weakened (Grover's — double key size)</td>
+                </tr>
+                <tr>
+                    <td>AES-256</td>
+                    <td>Symmetric encryption</td>
+                    <td class="tag-safe">Safe (128-bit quantum security)</td>
+                </tr>
+                <tr>
+                    <td>CRYSTALS-Kyber / Dilithium</td>
+                    <td>Post-quantum replacement</td>
+                    <td class="tag-safe">Quantum-resistant (NIST 2024)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="section-body" style="margin-top:1rem"><strong>Harvest Now, Decrypt Later:</strong> Adversaries may be
+            capturing encrypted traffic today to decrypt once a cryptographically relevant quantum computer exists. Any
+            data requiring long-term secrecy is already at risk.</p>
+
+        <hr>
+
+        <!-- ── HARDWARE GAP ── -->
+        <div class="section-title">Current Hardware Limitations</div>
+        <p class="section-body">Shor's Algorithm is theoretically complete. The hardware is not. Breaking RSA-2048
+            requires ~20 million stable, fault-tolerant qubits. We have ~1,000 noisy ones.</p>
+
+        <div class="hw-row">
+            <div class="hw-label"><span>Qubit count (current ~1,000 vs target ~20,000,000)</span><span>0.005%</span>
+            </div>
+            <div class="hw-track">
+                <div class="hw-fill" style="width:0.5%"></div>
+            </div>
+        </div>
+        <div class="hw-row">
+            <div class="hw-label"><span>Error correction overhead (~99% of qubits correct other
+                    qubits)</span><span>1%</span></div>
+            <div class="hw-track">
+                <div class="hw-fill" style="width:1%"></div>
+            </div>
+        </div>
+        <div class="hw-row" style="margin-bottom:1rem">
+            <div class="hw-label"><span>Largest number factored on quantum hardware: N = 21
+                    (2012)</span><span>~0%</span></div>
+            <div class="hw-track">
+                <div class="hw-fill" style="width:0.01%"></div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ── PQC ── -->
+        <div class="section-title">Post-Quantum Cryptography (PQC)</div>
+        <p class="section-body">NIST finalized four post-quantum standards in 2024. These algorithms are secure against
+            both classical and quantum attacks because they rely on mathematical problems with no known quantum speedup.
+        </p>
+        <div class="pqc-grid">
+            <div class="pqc-card">
+                <div class="pqc-label">NIST Standard · Key encapsulation</div>
+                <h4>CRYSTALS-Kyber (ML-KEM)</h4>
+                <p>Lattice-based. Replaces RSA/ECDH for key exchange. Based on Module Learning With Errors.</p>
+            </div>
+            <div class="pqc-card">
+                <div class="pqc-label">NIST Standard · Signature</div>
+                <h4>CRYSTALS-Dilithium (ML-DSA)</h4>
+                <p>Lattice-based digital signatures. Replaces RSA-PSS and ECDSA.</p>
+            </div>
+            <div class="pqc-card">
+                <div class="pqc-label">NIST Standard · Signature</div>
+                <h4>FALCON (FN-DSA)</h4>
+                <p>Fast-Fourier lattice signatures. Compact size, suited for constrained devices.</p>
+            </div>
+            <div class="pqc-card">
+                <div class="pqc-label">NIST Standard · Signature</div>
+                <h4>SPHINCS+ (SLH-DSA)</h4>
+                <p>Hash-based signatures. Most conservative: security based only on hash functions.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        &copy; 2024 &nbsp;·&nbsp; Shivang Singh, Ajay Kumar Kumawat, Onteddu Venkata Teja, Manaal Zahra Rizvi
+        &nbsp;·&nbsp; Mentor: Dr. Akhtar Rasool
+    </footer>
+
+    <script src="js/ui.js"></script>
+    <script src="js/shorMath.js"></script>
+</body>
+
+</html>
